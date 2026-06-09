@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { decode } from 'base64-arraybuffer';
+import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -17,29 +17,45 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
 import { useProducts, THUMB_COLORS } from '@/context/ProductsContext';
 
-type PickedImage = { uri: string; base64?: string | null };
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+
+type PickedImage = { uri: string; mimeType?: string | null };
 
 async function uploadProductImages(images: PickedImage[]): Promise<string | undefined> {
   for (const img of images) {
-    if (!img.base64) continue;
+    if (!img.uri) continue;
     try {
-      const ext = img.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
-      const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
-      const path = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { data, error } = await supabase.storage
-        .from('product-images')
-        .upload(path, decode(img.base64), { contentType, upsert: false });
-      if (!error && data) {
-        const { data: urlData } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(data.path);
-        return urlData.publicUrl;
+      const mimeType = img.mimeType ?? 'image/jpeg';
+      const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+      const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const storagePath = `products/${filename}`;
+      const uploadUrl = `${SUPABASE_URL}/storage/v1/object/product-images/${storagePath}`;
+      const headers = {
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+        'Content-Type': mimeType,
+      };
+
+      if (Platform.OS === 'web') {
+        const res = await fetch(img.uri);
+        const blob = await res.blob();
+        const up = await fetch(uploadUrl, { method: 'POST', headers, body: blob });
+        if (up.ok) return `${SUPABASE_URL}/storage/v1/object/public/product-images/${storagePath}`;
+      } else {
+        const result = await FileSystem.uploadAsync(uploadUrl, img.uri, {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+          headers,
+        });
+        if (result.status < 300) {
+          return `${SUPABASE_URL}/storage/v1/object/public/product-images/${storagePath}`;
+        }
       }
     } catch {
-      // 업로드 실패 시 이미지 없이 상품 등록 계속 진행
+      // 업로드 실패 시 이미지 없이 상품 등록 계속
     }
   }
   return undefined;
@@ -87,7 +103,7 @@ export default function RegisterScreen() {
     try {
       const imageUri = await Promise.race([
         uploadProductImages(images),
-        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 15000)),
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 10000)),
       ]);
       await addProduct({
         id: Date.now().toString(),
@@ -102,8 +118,9 @@ export default function RegisterScreen() {
         category,
       });
       router.back();
-    } catch {
-      Alert.alert('저장 실패', '상품을 저장하지 못했어요. 다시 시도해주세요.');
+    } catch (e: unknown) {
+      const detail = e instanceof Error ? e.message : String(e);
+      Alert.alert('저장 실패', detail);
     } finally {
       setIsSubmitting(false);
     }
@@ -124,10 +141,9 @@ export default function RegisterScreen() {
       allowsMultipleSelection: true,
       selectionLimit: 10 - images.length,
       quality: 0.8,
-      base64: true,
     });
     if (!result.canceled) {
-      const picked: PickedImage[] = result.assets.map((a) => ({ uri: a.uri, base64: a.base64 }));
+      const picked: PickedImage[] = result.assets.map((a) => ({ uri: a.uri, mimeType: a.mimeType }));
       setImages((prev) => [...prev, ...picked].slice(0, 10));
     }
   };

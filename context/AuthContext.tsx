@@ -5,6 +5,8 @@ export type User = {
   id: string;
   nickname: string;
   email: string;
+  tier: 'free' | 'premium';
+  role: 'user' | 'admin';
 };
 
 type AuthContextType = {
@@ -12,7 +14,8 @@ type AuthContextType = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<string | null>;
   signup: (nickname: string, email: string, password: string) => Promise<string | null>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  upgradeToPremium: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -28,20 +31,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
-          // profiles 테이블에서 닉네임·이메일 조회
+          // users 테이블에서 닉네임·이메일·tier·role 조회
           const { data } = await supabase
-            .from('profiles')
-            .select('id, nickname, email')
+            .from('users')
+            .select('id, nickname, email, tier, role')
             .eq('id', session.user.id)
             .single();
           if (data) {
-            setUser({ id: data.id, nickname: data.nickname, email: data.email });
+            setUser({
+              id: data.id,
+              nickname: data.nickname,
+              email: data.email,
+              tier: data.tier,
+              role: data.role,
+            });
           } else {
-            // profiles 행이 없을 때 fallback: session.user 데이터 직접 사용
+            // users 행이 없을 때 fallback: session.user 데이터 직접 사용
             setUser({
               id: session.user.id,
               nickname: (session.user.user_metadata?.nickname as string) ?? '사용자',
               email: session.user.email ?? '',
+              tier: 'free',
+              role: 'user',
             });
           }
         } else {
@@ -88,12 +99,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   };
 
-  const logout = () => {
-    supabase.auth.signOut();
+  const logout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const upgradeToPremium = async () => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('users')
+      .update({ tier: 'premium' })
+      .eq('id', user.id);
+    if (!error) {
+      setUser((prev) => prev ? { ...prev, tier: 'premium' } : null);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, upgradeToPremium }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   FlatList,
@@ -12,54 +11,46 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useLocation } from '@/context/LocationContext';
+import { DESIGN } from '@/constants/theme';
 
-const CATEGORIES = ['전체', '동네질문', '동네맛집', '생활정보', '분실/실종', '동네사건사고'];
-
+const TOPICS = ['전체', '동네질문', '동네소식', '취미생활', '맛집', '분실/실종'];
 
 export default function NeighborhoodScreen() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { location } = useLocation();
-  const [activeCategory, setActiveCategory] = useState('전체');
+  const [activeTopic, setActiveTopic] = useState('전체');
 
   return (
     <View style={styles.root}>
       {/* 헤더 */}
       <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
-        <Pressable style={styles.locationBtn} onPress={() => router.push('/location' as any)}>
-          <Text style={styles.locationText}>{location}</Text>
-          <Ionicons name="chevron-down" size={16} color="#FF7E36" />
-        </Pressable>
-        <View style={styles.headerRight}>
-          <Pressable style={styles.iconBtn}>
-            <Ionicons name="search" size={22} color="#212121" />
-          </Pressable>
-          <Pressable style={styles.iconBtn}>
-            <Ionicons name="create-outline" size={22} color="#212121" />
-          </Pressable>
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>동네생활</Text>
+          <Text style={styles.headerSub}>{location} · 반경 3km</Text>
         </View>
       </View>
 
-      {/* 카테고리 필터 */}
+      {/* 토픽 언더라인 탭 */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoryScroll}
+        contentContainerStyle={styles.topicScroll}
       >
-        {CATEGORIES.map((cat) => (
-          <Pressable
-            key={cat}
-            style={[styles.categoryChip, activeCategory === cat && styles.categoryChipActive]}
-            onPress={() => setActiveCategory(cat)}
-          >
-            <Text style={[styles.categoryText, activeCategory === cat && styles.categoryTextActive]}>
-              {cat}
-            </Text>
-          </Pressable>
-        ))}
+        {TOPICS.map((topic) => {
+          const active = topic === activeTopic;
+          return (
+            <Pressable
+              key={topic}
+              style={[styles.topicTab, active && styles.topicTabActive]}
+              onPress={() => setActiveTopic(topic)}
+            >
+              <Text style={[styles.topicText, active && styles.topicTextActive]}>
+                {topic}
+              </Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
-
-      <View style={styles.divider} />
 
       {/* 게시글 목록 */}
       <FlatList
@@ -75,6 +66,12 @@ export default function NeighborhoodScreen() {
         }
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
       />
+
+      {/* FAB */}
+      <Pressable style={styles.fab}>
+        <Ionicons name="create-outline" size={18} color="#fff" />
+        <Text style={styles.fabText}>글쓰기</Text>
+      </Pressable>
     </View>
   );
 }
@@ -82,38 +79,87 @@ export default function NeighborhoodScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#fff' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e0e0e0',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: DESIGN.borderSubtle,
   },
-  locationBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { fontSize: 17, fontWeight: '700', color: '#212121' },
-  headerRight: { flexDirection: 'row' },
-  iconBtn: { padding: 6 },
-  categoryScroll: {
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: DESIGN.textPrimary,
+    letterSpacing: -0.5,
+  },
+  headerSub: {
+    fontSize: 12,
+    color: DESIGN.textMuted,
+  },
+  topicScroll: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: DESIGN.borderDivider,
+  },
+  topicTab: {
+    paddingVertical: 12,
+    paddingHorizontal: 2,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  topicTabActive: {
+    borderBottomColor: DESIGN.accent,
+  },
+  topicText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: DESIGN.textMuted,
+  },
+  topicTextActive: {
+    fontWeight: '800',
+    color: DESIGN.accent,
+  },
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingTop: 80,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: DESIGN.textSecondary,
+  },
+  emptySubText: {
+    fontSize: 13,
+    color: DESIGN.textMuted,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
+    gap: 6,
+    backgroundColor: DESIGN.accent,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    shadowColor: DESIGN.accent,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 8,
   },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
+  fabText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
   },
-  categoryChipActive: { borderColor: '#212121', backgroundColor: '#212121' },
-  categoryText: { fontSize: 13, color: '#444' },
-  categoryTextActive: { color: '#fff', fontWeight: '600' },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: '#e0e0e0' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingTop: 80 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#444' },
-  emptySubText: { fontSize: 13, color: '#999' },
 });

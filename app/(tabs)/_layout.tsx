@@ -3,7 +3,7 @@ import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
+import { DESIGN } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -16,7 +16,9 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: DESIGN.accent,
+        tabBarInactiveTintColor: DESIGN.tabInactive,
+        tabBarStyle: { borderTopColor: DESIGN.tabBorder, borderTopWidth: 1 },
         headerShown: false,
         tabBarButton: HapticTab,
       }}>
@@ -41,6 +43,15 @@ export default function TabLayout() {
         options={{
           title: '내근처',
           tabBarIcon: ({ color }) => <IconSymbol size={26} name="map.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: '관리자',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="shield.fill" color={color} />
+          ),
         }}
       />
       <Tabs.Screen

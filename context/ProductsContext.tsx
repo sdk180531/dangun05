@@ -12,6 +12,7 @@ export type Product = {
   thumbColor: string;
   imageUri?: string;
   category: string;
+  tierRequired: 'free' | 'premium';
 };
 
 // Supabase DB 행 타입 (snake_case)
@@ -27,6 +28,7 @@ type ProductRow = {
   image_uri: string | null;
   category: string;
   created_at: string;
+  tier_required: string;
 };
 
 export const THUMB_COLORS = [
@@ -47,6 +49,7 @@ function rowToProduct(row: ProductRow): Product {
     thumbColor: row.thumb_color,
     imageUri: row.image_uri ?? undefined,
     category: row.category,
+    tierRequired: (row.tier_required ?? 'free') as 'free' | 'premium',
   };
 }
 
@@ -96,6 +99,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
       thumb_color: product.thumbColor,
       image_uri: product.imageUri ?? null,
       category: product.category,
+      tier_required: product.tierRequired ?? 'free',
     });
 
     if (error) {

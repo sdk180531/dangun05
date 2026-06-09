@@ -7,18 +7,24 @@ import DaangnHeader from '@/components/DaangnHeader';
 import CategorySection from '@/components/CategorySection';
 import ProductItem from '@/components/ProductItem';
 import { useProducts } from '@/context/ProductsContext';
+import { useAuth } from '@/context/AuthContext';
 
 const Separator = () => <View style={styles.separator} />;
 
 export default function HomeScreen() {
   const router = useRouter();
   const { products, isLoading } = useProducts();
+  const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState('전체');
+
+  const tierFiltered = user?.tier === 'premium'
+    ? products
+    : products.filter((p) => p.tierRequired !== 'premium');
 
   const filtered =
     activeCategory === '전체'
-      ? products
-      : products.filter((p) => p.category === activeCategory);
+      ? tierFiltered
+      : tierFiltered.filter((p) => p.category === activeCategory);
 
   return (
     <View style={styles.container}>
@@ -44,7 +50,8 @@ export default function HomeScreen() {
         contentContainerStyle={styles.listContent}
       />
       <Pressable style={styles.fab} onPress={() => router.push('/modal')}>
-        <Ionicons name="pencil" size={22} color="#fff" />
+        <Ionicons name="add" size={18} color="#fff" />
+        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}>상품등록하기</Text>
       </Pressable>
     </View>
   );
@@ -81,17 +88,18 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     bottom: 24,
-    right: 20,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#FF7E36',
+    right: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    gap: 6,
+    backgroundColor: '#FF6F0F',
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    shadowColor: '#FF6F0F',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 8,
   },
 });

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { type Product } from '@/context/ProductsContext';
+import { DESIGN } from '@/constants/theme';
 
 export type { Product };
 
@@ -14,7 +15,10 @@ export default function ProductItem({ item }: Props) {
   const router = useRouter();
 
   return (
-    <Pressable style={styles.container} onPress={() => router.push(`/product/${item.id}` as any)}>
+    <Pressable
+      style={styles.container}
+      onPress={() => router.push(`/product/${item.id}` as any)}
+    >
       {item.imageUri ? (
         <Image source={{ uri: item.imageUri }} style={styles.thumbnail} />
       ) : (
@@ -25,14 +29,18 @@ export default function ProductItem({ item }: Props) {
         <Text style={styles.meta}>{item.location} · {item.time}</Text>
         <Text style={styles.price}>{item.price}</Text>
         <View style={styles.stats}>
-          <View style={styles.statItem}>
-            <Ionicons name="heart-outline" size={14} color="#999" />
-            <Text style={styles.statText}>{item.likes}</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons name="chatbubble-outline" size={14} color="#999" />
-            <Text style={styles.statText}>{item.chats}</Text>
-          </View>
+          {item.chats > 0 && (
+            <View style={styles.statItem}>
+              <Ionicons name="chatbubble-outline" size={13} color={DESIGN.textMuted} />
+              <Text style={styles.statText}>{item.chats}</Text>
+            </View>
+          )}
+          {item.likes > 0 && (
+            <View style={styles.statItem}>
+              <Ionicons name="heart-outline" size={13} color={DESIGN.textMuted} />
+              <Text style={styles.statText}>{item.likes}</Text>
+            </View>
+          )}
         </View>
       </View>
     </Pressable>
@@ -45,40 +53,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     backgroundColor: '#fff',
-    gap: 12,
+    gap: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   thumbnail: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
+    width: 104,
+    height: 104,
+    borderRadius: 14,
     flexShrink: 0,
   },
   info: {
     flex: 1,
-    justifyContent: 'space-between',
+    minWidth: 0,
   },
   title: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#212121',
+    color: DESIGN.textPrimary,
     lineHeight: 21,
   },
   meta: {
-    fontSize: 13,
-    color: '#999',
+    fontSize: 12,
+    color: DESIGN.textMuted,
     marginTop: 4,
   },
   price: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#212121',
-    marginTop: 4,
+    fontSize: 17,
+    fontWeight: '800',
+    color: DESIGN.textPrimary,
+    marginTop: 6,
+    letterSpacing: -0.4,
   },
   stats: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 6,
+    gap: 10,
+    marginTop: 'auto' as any,
+    paddingTop: 8,
   },
   statItem: {
     flexDirection: 'row',
@@ -86,7 +98,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   statText: {
-    fontSize: 13,
-    color: '#999',
+    fontSize: 12,
+    color: DESIGN.textMuted,
   },
 });
