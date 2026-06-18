@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import { supabase } from '@/lib/supabase';
 
 export type User = {
@@ -13,6 +15,7 @@ type AuthContextType = {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<string | null>;
+  loginWithGoogle: () => Promise<string | null>;
   signup: (nickname: string, email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
   upgradeToPremium: () => Promise<void>;
@@ -99,6 +102,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   };
 
+  const loginWithGoogle = async (): Promise<string | null> => {
+    const redirectTo = AuthSession.makeRedirectUri();
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true },
+    });
+
+    if (error || !data.url) return '구글 로그인을 시작할 수 없어요';
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+    if (result.type !== 'success') return null;
+
+    const url = new URL(result.url);
+    const code = url.searchParams.get('code');
+    if (code) {
+      const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+      return sessionError ? '구글 로그인 인증에 실패했어요' : null;
+    }
+
+    const params = new URLSearchParams(url.hash.replace('#', ''));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if (accessToken) {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken ?? '',
+      });
+      return sessionError ? '구글 로그인 인증에 실패했어요' : null;
+    }
+
+    return '구글 로그인이 완료되지 않았어요';
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
   };
@@ -115,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, upgradeToPremium }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, signup, logout, upgradeToPremium }}>
       {children}
     </AuthContext.Provider>
   );

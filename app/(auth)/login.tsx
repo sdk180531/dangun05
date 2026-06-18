@@ -1,6 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
+
+WebBrowser.maybeCompleteAuthSession();
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,21 +17,36 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
+import GoogleLogo from '@/components/GoogleLogo';
 
 const DAANGN_ORANGE = '#FF7E36';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const canSubmit = email.trim().length > 0 && password.length > 0;
+
+  const handleGoogleLogin = async () => {
+    if (isGoogleLoading) return;
+    setError('');
+    setIsGoogleLoading(true);
+    const err = await loginWithGoogle();
+    setIsGoogleLoading(false);
+    if (err) {
+      setError(err);
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
 
   const handleLogin = async () => {
     if (isLoggingIn) return;
@@ -120,6 +138,18 @@ export default function LoginScreen() {
           <View style={styles.dividerLine} />
         </View>
 
+        {/* Google 로그인 버튼 */}
+        <Pressable
+          style={[styles.googleBtn, isGoogleLoading && styles.primaryBtnDisabled]}
+          onPress={handleGoogleLogin}
+          disabled={isGoogleLoading}
+        >
+          <GoogleLogo size={20} />
+          <Text style={styles.googleBtnText}>
+            {isGoogleLoading ? '로그인 중...' : 'Google 계정으로 계속하기'}
+          </Text>
+        </Pressable>
+
         {/* 회원가입 버튼 */}
         <Pressable
           style={styles.secondaryBtn}
@@ -196,4 +226,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryBtnText: { fontSize: 16, fontWeight: '600', color: '#555' },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#747775',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  googleBtnText: { fontSize: 15, fontWeight: '500', color: '#1F1F1F' },
 });

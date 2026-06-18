@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "20260515",
+    "name": "광주마켓",
     "slug": "20260515",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -15,6 +15,7 @@
       }
     },
     "android": {
+      "package": "com.sdk180531.dangun05",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/carrot.png",
         "backgroundColor": "#FF6F0F"
@@ -44,6 +45,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2199faf6-3833-476d-9c44-f2071fb8fc08"
+      }
     }
   }
 }
