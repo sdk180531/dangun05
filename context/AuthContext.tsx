@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loginWithGoogle = async (): Promise<string | null> => {
     const redirectTo = AuthSession.makeRedirectUri({
-      scheme: '20260515',
+      native: 'kwangjumarket://auth/callback',
     });
 
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -126,23 +126,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (result.type !== 'success') return null;
 
-    const url = new URL(result.url);
-    const code = url.searchParams.get('code');
+    // 1. PKCE flow: query string에서 code 추출 (정규식 — scheme 유효성 무관)
+    const codeMatch = result.url.match(/[?&]code=([^&#]+)/);
+    const code = codeMatch?.[1];
     if (code) {
       const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
       return sessionError ? '구글 로그인 인증에 실패했어요' : null;
     }
 
-    const params = new URLSearchParams(url.hash.replace('#', ''));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    if (accessToken) {
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken ?? '',
-      });
-      return sessionError ? '구글 로그인 인증에 실패했어요' : null;
+    // 2. Implicit flow fallback: hash에서 access_token 추출
+    const hashIndex = result.url.indexOf('#');
+    if (hashIndex !== -1) {
+      const hashParams = new URLSearchParams(result.url.slice(hashIndex + 1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      if (accessToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken ?? '',
+        });
+        return sessionError ? '구글 로그인 인증에 실패했어요' : null;
+      }
     }
+
+    // 3. Supabase가 내부적으로 이미 세션을 설정한 경우
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) return null;
 
     return '구글 로그인이 완료되지 않았어요';
   };
