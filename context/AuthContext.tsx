@@ -7,6 +7,8 @@ export type User = {
   id: string;
   nickname: string;
   email: string;
+  avatar_url: string | null;
+  provider: string;
   tier: 'free' | 'premium';
   role: 'user' | 'admin';
 };
@@ -34,10 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (session?.user) {
-          // users 테이블에서 닉네임·이메일·tier·role 조회
+          // profiles 테이블에서 닉네임·이메일·avatar_url·tier·role 조회
           const { data } = await supabase
-            .from('users')
-            .select('id, nickname, email, tier, role')
+            .from('profiles')
+            .select('id, nickname, email, avatar_url, provider, tier, role')
             .eq('id', session.user.id)
             .single();
           if (data) {
@@ -45,15 +47,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               id: data.id,
               nickname: data.nickname,
               email: data.email,
+              avatar_url: data.avatar_url ?? null,
+              provider: data.provider,
               tier: data.tier,
               role: data.role,
             });
           } else {
-            // users 행이 없을 때 fallback: session.user 데이터 직접 사용
+            // profiles 행이 없을 때 fallback: session.user 데이터 직접 사용
             setUser({
               id: session.user.id,
-              nickname: (session.user.user_metadata?.nickname as string) ?? '사용자',
+              nickname: (session.user.user_metadata?.nickname as string)
+                ?? (session.user.user_metadata?.full_name as string)
+                ?? '사용자',
               email: session.user.email ?? '',
+              avatar_url: (session.user.user_metadata?.avatar_url as string) ?? null,
+              provider: (session.user.app_metadata?.provider as string) ?? 'email',
               tier: 'free',
               role: 'user',
             });
@@ -103,7 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginWithGoogle = async (): Promise<string | null> => {
-    const redirectTo = AuthSession.makeRedirectUri();
+    const redirectTo = AuthSession.makeRedirectUri({
+      scheme: '20260515',
+    });
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -144,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const upgradeToPremium = async () => {
     if (!user) return;
     const { error } = await supabase
-      .from('users')
+      .from('profiles')
       .update({ tier: 'premium' })
       .eq('id', user.id);
     if (!error) {
