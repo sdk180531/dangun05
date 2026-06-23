@@ -19,6 +19,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<string | null>;
   loginWithGoogle: () => Promise<string | null>;
   loginWithKakao: () => Promise<string | null>;
+  loginWithNaver: () => Promise<string | null>;
   signup: (nickname: string, email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
   upgradeToPremium: () => Promise<void>;
@@ -200,6 +201,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return '카카오 로그인이 완료되지 않았어요';
   };
 
+  const loginWithNaver = async (): Promise<string | null> => {
+    // Edge Function URL을 콜백으로 사용 (Naver는 HTTPS만 허용)
+    const edgeFnUrl = 'https://itvhgyjgujiijapjnayw.supabase.co/functions/v1/naver-auth';
+    const appScheme = 'kwangjumarket://auth/callback';
+    const state = Math.random().toString(36).slice(2);
+
+    const naverAuthUrl =
+      `https://nid.naver.com/oauth2.0/authorize` +
+      `?client_id=HKg5Sfukqs9DYmGUQe1l` +
+      `&redirect_uri=${encodeURIComponent(edgeFnUrl)}` +
+      `&response_type=code` +
+      `&state=${state}`;
+
+    // Edge Function이 처리 후 앱 스킴으로 리다이렉트 → openAuthSessionAsync가 캐치
+    const result = await WebBrowser.openAuthSessionAsync(naverAuthUrl, appScheme);
+    if (result.type !== 'success') return null;
+
+    const errorMatch = result.url.match(/[?&]error=([^&#]+)/);
+    if (errorMatch) return '네이버 로그인에 실패했어요';
+
+    const accessTokenMatch = result.url.match(/[?&]access_token=([^&#]+)/);
+    const refreshTokenMatch = result.url.match(/[?&]refresh_token=([^&#]+)/);
+    const accessToken = accessTokenMatch?.[1];
+    const refreshToken = refreshTokenMatch?.[1];
+
+    if (!accessToken) return '네이버 로그인에 실패했어요';
+
+    const { error: sessionError } = await supabase.auth.setSession({
+      access_token: decodeURIComponent(accessToken),
+      refresh_token: decodeURIComponent(refreshToken ?? ''),
+    });
+    return sessionError ? '네이버 로그인 세션 설정에 실패했어요' : null;
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
   };
@@ -216,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, loginWithKakao, signup, logout, upgradeToPremium }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, loginWithKakao, loginWithNaver, signup, logout, upgradeToPremium }}>
       {children}
     </AuthContext.Provider>
   );

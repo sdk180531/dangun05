@@ -19,13 +19,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
 import GoogleLogo from '@/components/GoogleLogo';
 import KakaoLogo from '@/components/KakaoLogo';
+import NaverLogo from '@/components/NaverLogo';
 
 const DAANGN_ORANGE = '#FF7E36';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login, loginWithGoogle, loginWithKakao } = useAuth();
+  const { login, loginWithGoogle, loginWithKakao, loginWithNaver } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,6 +35,7 @@ export default function LoginScreen() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isKakaoLoading, setIsKakaoLoading] = useState(false);
+  const [isNaverLoading, setIsNaverLoading] = useState(false);
 
   const canSubmit = email.trim().length > 0 && password.length > 0;
 
@@ -56,6 +58,19 @@ export default function LoginScreen() {
     setIsKakaoLoading(true);
     const err = await loginWithKakao();
     setIsKakaoLoading(false);
+    if (err) {
+      setError(err);
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
+  const handleNaverLogin = async () => {
+    if (isNaverLoading) return;
+    setError('');
+    setIsNaverLoading(true);
+    const err = await loginWithNaver();
+    setIsNaverLoading(false);
     if (err) {
       setError(err);
     } else {
@@ -177,6 +192,18 @@ export default function LoginScreen() {
           </Text>
         </Pressable>
 
+        {/* 네이버 로그인 버튼 */}
+        <Pressable
+          style={[styles.naverBtn, isNaverLoading && styles.primaryBtnDisabled]}
+          onPress={handleNaverLogin}
+          disabled={isNaverLoading}
+        >
+          <NaverLogo size={20} />
+          <Text style={styles.naverBtnText}>
+            {isNaverLoading ? '로그인 중...' : '네이버로 계속하기'}
+          </Text>
+        </Pressable>
+
         {/* 회원가입 버튼 */}
         <Pressable
           style={styles.secondaryBtn}
@@ -279,4 +306,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   kakaoBtnText: { fontSize: 15, fontWeight: '600', color: 'rgba(0,0,0,0.85)' },
+  naverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#03C75A',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  naverBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
 });
