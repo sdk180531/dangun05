@@ -18,6 +18,7 @@ type AuthContextType = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<string | null>;
   loginWithGoogle: () => Promise<string | null>;
+  loginWithKakao: () => Promise<string | null>;
   signup: (nickname: string, email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
   upgradeToPremium: () => Promise<void>;
@@ -156,6 +157,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return '구글 로그인이 완료되지 않았어요';
   };
 
+  const loginWithKakao = async (): Promise<string | null> => {
+    const redirectTo = AuthSession.makeRedirectUri({
+      native: 'kwangjumarket://auth/callback',
+    });
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'kakao',
+      options: { redirectTo, skipBrowserRedirect: true },
+    });
+
+    if (error || !data.url) return '카카오 로그인을 시작할 수 없어요';
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+    if (result.type !== 'success') return null;
+
+    const codeMatch = result.url.match(/[?&]code=([^&#]+)/);
+    const code = codeMatch?.[1];
+    if (code) {
+      const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+      return sessionError ? '카카오 로그인 인증에 실패했어요' : null;
+    }
+
+    const hashIndex = result.url.indexOf('#');
+    if (hashIndex !== -1) {
+      const hashParams = new URLSearchParams(result.url.slice(hashIndex + 1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      if (accessToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken ?? '',
+        });
+        return sessionError ? '카카오 로그인 인증에 실패했어요' : null;
+      }
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) return null;
+
+    return '카카오 로그인이 완료되지 않았어요';
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
   };
@@ -172,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, signup, logout, upgradeToPremium }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, loginWithKakao, signup, logout, upgradeToPremium }}>
       {children}
     </AuthContext.Provider>
   );

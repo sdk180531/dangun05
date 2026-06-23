@@ -18,13 +18,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@/context/AuthContext';
 import GoogleLogo from '@/components/GoogleLogo';
+import KakaoLogo from '@/components/KakaoLogo';
 
 const DAANGN_ORANGE = '#FF7E36';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, loginWithKakao } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +33,7 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isKakaoLoading, setIsKakaoLoading] = useState(false);
 
   const canSubmit = email.trim().length > 0 && password.length > 0;
 
@@ -41,6 +43,19 @@ export default function LoginScreen() {
     setIsGoogleLoading(true);
     const err = await loginWithGoogle();
     setIsGoogleLoading(false);
+    if (err) {
+      setError(err);
+    } else {
+      router.replace('/(tabs)');
+    }
+  };
+
+  const handleKakaoLogin = async () => {
+    if (isKakaoLoading) return;
+    setError('');
+    setIsKakaoLoading(true);
+    const err = await loginWithKakao();
+    setIsKakaoLoading(false);
     if (err) {
       setError(err);
     } else {
@@ -150,6 +165,18 @@ export default function LoginScreen() {
           </Text>
         </Pressable>
 
+        {/* 카카오 로그인 버튼 */}
+        <Pressable
+          style={[styles.kakaoBtn, isKakaoLoading && styles.primaryBtnDisabled]}
+          onPress={handleKakaoLogin}
+          disabled={isKakaoLoading}
+        >
+          <KakaoLogo size={20} />
+          <Text style={styles.kakaoBtnText}>
+            {isKakaoLoading ? '로그인 중...' : '카카오로 계속하기'}
+          </Text>
+        </Pressable>
+
         {/* 회원가입 버튼 */}
         <Pressable
           style={styles.secondaryBtn}
@@ -240,4 +267,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   googleBtnText: { fontSize: 15, fontWeight: '500', color: '#1F1F1F' },
+  kakaoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#FEE500',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  kakaoBtnText: { fontSize: 15, fontWeight: '600', color: 'rgba(0,0,0,0.85)' },
 });
