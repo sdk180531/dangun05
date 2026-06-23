@@ -29,7 +29,6 @@
     },
     "plugins": [
       "expo-router",
-      "@react-native-seoul/naver-login",
       [
         "expo-splash-screen",
         {
